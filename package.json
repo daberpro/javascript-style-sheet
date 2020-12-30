@@ -2,11 +2,19 @@
   "name": "light",
   "version": "1.0.0",
   "description": "\"use this library for your svelte project\"",
-  "main": "index.js",
+  "main": "main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "node ."
+    "dev": "node main.js",
+    "es": "eslint main.js --fix",
+    "watch": "nodemon main.js -e js"
   },
   "author": "Daber",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "eslint": "^7.16.0",
+    "eslint-config-google": "^0.14.0",
+    "eval": "^0.1.4",
+    "js-beautify": "^1.13.0"
+  }
 }

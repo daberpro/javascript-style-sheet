@@ -1,157 +1,319 @@
-
 const fs = require("fs");
+const _eval = require('eval')
 const path = require("path");
 const url = require("url");
+const beautify = require('js-beautify').js;
 
 //membuat class yang akan menyimpan si compiler
-class compiler{
-	//set contructor untuk mengambil config
-	constructor(args){
-		//menambahkan property dari compiler
-		this._path = args.path;
-		this._file_name = args.file_name;
-		this.config = args.config;
-		this.content = args.content;
-	}
+class compiler {
+    //set contructor untuk mengambil config
+    constructor(args) {
+        //menambahkan property dari compiler
+        this._path = args.path;
+        this._file_name = args.file_name;
+        this.config = args.config;
+        if (args.content) {
+            this.content = args.content;
+        }
+    }
 
-	//membuat fungsi inisialisasi
-	init(){
-		//membuat file
-		//kemudian melakukan pengecekan apakah
-		//file nya sudah ada apa belum
-		if(this._file_name instanceof Array){
+    //membuat fungsi inisialisasi
+    init() {
+        //membuat file
+        //kemudian melakukan pengecekan apakah
+        //file nya sudah ada apa belum
+        if (this._file_name instanceof Array) {
 
-			if(this.content instanceof Array){
-				for(let x in this._file_name){
-					fs.open(this._path+this._file_name[x],"w+",(err,data)=>{
+            if (this.content instanceof Array) {
+                for (let x in this._file_name) {
+                    fs.open(this._path + this._file_name[x], "w+", (err, data) => {
 
-						if(err){
-							throw err;
-						}
+                        if (err) {
+                            throw err;
+                        }
 
-						// tulis konten ke file
-					    fs.writeFile(data, this.content[x], (err) => {
-					        if (err) throw err;
-					        console.log('Saved!');
-					    }); 
+                        // tulis konten ke file
+                        fs.writeFile(data, this.content[x], (err) => {
+                            if (err) throw err;
+                            console.log('Saved!');
+                        });
 
-					    // baca file
-					    fs.readFile(data, (err, data) => {
-					        if (err) throw err;
-					        console.log(data.toString('utf8'));
-					    });
+                        // baca file
+                        fs.readFile(data, (err, data) => {
+                            if (err) throw err;
+                            console.log(data.toString('utf8'));
+                        });
 
-					});
-				}
-			}else{
-				for(let x in this._file_name){
-					fs.open(this._path+this._file_name[x],"w+",(err,data)=>{
+                    });
+                }
+            } else {
+                for (let x in this._file_name) {
+                    fs.open(this._path + this._file_name[x], "w+", (err, data) => {
 
-						if(err){
-							throw err;
-						}
+                        if (err) {
+                            throw err;
+                        }
 
-						// tulis konten ke file
-					    fs.writeFile(data, this.content, (err) => {
-					        if (err) throw err;
-					        console.log('Saved!');
-					    }); 
+                        // tulis konten ke file
+                        fs.writeFile(data, this.content, (err) => {
+                            if (err) throw err;
+                            console.log('Saved!');
+                        });
 
-					    // baca file
-					    fs.readFile(data, (err, data) => {
-					        if (err) throw err;
-					        console.log(data.toString('utf8'));
-					    });
+                        // baca file
+                        fs.readFile(data, (err, data) => {
+                            if (err) throw err;
+                            console.log(data.toString('utf8'));
+                        });
 
-					});
-				}
-			}
+                    });
+                }
+            }
 
-		}else{
-			fs.open(this._path+this._file_name,"w+",(err,data)=>{
+        } else {
+            fs.open(this._path + this._file_name, "w+", (err, data) => {
 
-				if(err){
-					throw err;
-				}
+                if (err) {
+                    throw err;
+                }
 
-				// tulis konten ke file
-			    fs.writeFile(data, this.content, (err) => {
-			        if (err) throw err;
-			        console.log('Saved!');
-			    }); 
+                // tulis konten ke file
+                fs.writeFile(data, this.content, (err) => {
+                    if (err) throw err;
+                    console.log('Saved!');
+                });
 
-			    // baca file
-			    fs.readFile(data, (err, data) => {
-			        if (err) throw err;
-			        console.log(data.toString('utf8'));
-			    });
+                // baca file
+                fs.readFile(data, (err, data) => {
+                    if (err) throw err;
+                    console.log(data.toString('utf8'));
+                });
 
-			});
-		}
-	}
+            });
+        }
+    }
 
-	watch(){
-		if(this.config.src instanceof Array){
-			for(let x in this.config.src){
-				fs.readFile("src/"+this.config.src[x],(err,file)=>{
-					let data_source = file.toString("utf-8");
-					let data_format = data_source.split(/\s*\n/igm);
+    watch() {
 
-					// console.log(data_format);
+        if (this.config.src instanceof Array) {
 
-					let light = {
-						variabel: ()=>{
+            for (let x in this.config.src) {
+                fs.readFile("src/" + this.config.src[x], (err, file) => {
+     
+                    // Make an object a string that evaluates to an equivalent object
+                    //  Note that eval() seems tricky and sometimes you have to do
+                    //  something like eval("a = " + yourString), then use the value
+                    //  of a.
+                    //
+                    //  Also this leaves extra commas after everything, but JavaScript
+                    //  ignores them.
+                    function convertToText(obj) {
+                        // create an array that will later be joined into a string.
+                        const string = [];
 
-							let _variabel_declaration = [];
-							let _final_declaration = [];
-							let _content_declaration = [];
-							for(let x in data_format){
-								_variabel_declaration.push(data_format[x].split("="));
-							}
+                        // is object
+                        //    Both arrays and objects seem to return "object"
+                        //    when typeof(obj) is applied to them. So instead
+                        //    I am checking to see if they have the property
+                        //    join, which normal objects don't have but
+                        //    arrays do.
+                        if (typeof(obj) == "object" && (obj.join == undefined)) {
+                            string.push("{");
+                            for (const prop in obj) {
+                                string.push(prop, ": ", convertToText(obj[prop]), ",");
+                            }
+                            string.push("}");
 
-							for(let x in _variabel_declaration){
-								for(let y in _variabel_declaration[x]){
-									if(_variabel_declaration[x][y].match(/\s*[{}$:]/igm)){
+                            // is array
+                        } else if (typeof(obj) == "object" && !(obj.join == undefined)) {
+                            string.push("[");
+                            for (const prop in obj) {
+                                string.push(convertToText(obj[prop]), ",");
+                            }
+                            string.push("]");
 
-										_content_declaration.push(_variabel_declaration[x][y]);
-									}
-									if(_variabel_declaration[x][y].match(/\let*|var*|const*/igm)){
+                            // is function
+                        } else if (typeof(obj) == "function") {
+                            string.push(obj.toString());
 
-										_final_declaration.push(_variabel_declaration[x]);
-									};
-								}
-							}
+                            // all other values can be done with JSON.stringify
+                        } else {
+                            string.push(JSON.stringify(obj));
+                        }
 
-							let fill = _content_declaration.join("").split("$");
-							fill.splice(fill.length-1,fill.length);
-							let fill_position = -1;
+                        return string.join("");
+                    }
 
-							_content_declaration.forEach((i)=>{
-								for(let x in _final_declaration){
-									for(let y in _final_declaration[x]){
-										if(_final_declaration[x][y] === i){
-											fill_position++;
-											_final_declaration[x][y] =fill[fill_position];
+                    // fungsi ini akan berisi class class yang di deklarasikan
+                    function getClass() {
+                        const data = file.toString("utf-8").split(/\s*\n/);
+                        // variabel ini adalah varibael yang menampung banyak nya jumlah class
+                        const ClassData = [];
+                        // variabel ini berisi index dari setiap lokasi string dari setiap value dari data
+                        let ClassDeclaration = [];
+                        // ini untuk jumlah class
+                        let count = 0;
+                        // variabel ini berisi class class yang telah di ambil
+                        const revition = [];
+                        // variabel ini akan berisi string nama class
+                        const class_name = [];
 
-										}
-									}
-								}
-							});
+                        for (let x = 0; x < data.length; x++) {
+                            // mengecek setiap value dari array data yang terdapat string class
+                            if (data[x].match(/\w*class/) && data[x].match(/\w*{/)) {
+                                count++;
+                                ClassData.push(count);
+                                // di sini mengambil nama kelas
+                                class_name.push(data[x]);
+                                ClassDeclaration.push({
+                                    // memasukan lokasi awal string class
+                                    [count]: x,
+                                });
+                            } else if (data[x].match(/\w*}/)) {
+                                // memasukan lokasi akhir string } dari setiap class
+                                ClassDeclaration.push({
+                                    [count]: x,
+                                });
+                            }
+                        }
 
-							return [...new Set(_final_declaration)];
-		
-						}
-					}
+                        // kita urutkan semua index class nya dari yang terkecil ke yang terbesar
+                        ClassDeclaration = ClassDeclaration.sort((a, b) => {
+                            return a - b;
+                        });
 
-					console.log(light.variabel());
-				});	
-			}
-		}else{
-			fs.readFile("src/"+this.config.src[x],(err,file)=>{
-				console.log(file.toString("utf-8"));
-			});
-		}
-	}
+                        // kita ambil kelas dari si variabel data berdasarkam index dari ClassData
+                        for (let x = 0; x < ClassDeclaration.length - 1; x++) {
+                            for (const y of ClassData) {
+                                if (ClassDeclaration[x][y]) {
+                                    const clear_class = data.slice(ClassDeclaration[x][y], ClassDeclaration[x + 1][y] + 1);
+                                    const class_property = data.slice(ClassDeclaration[x][y] + 1, ClassDeclaration[x + 1][y]);
+                                    if (clear_class.length > 0) {
+                                        revition.push(clear_class);
+                                    }
+                                }
+                            }
+                        }
+
+                        // variabel ini akan menampung class class yang telah di ambil dan akan
+                        // di jadikan array
+                        let class_rev = "";
+
+                        // kita ambil setiap class dari variabel revition dan memisahkan setiap class
+                        for (let i = 0; i < revition.length; i++) {
+                            if (revition[i].join(" ").match(/\w*[},]/igm).length > 2) {
+                                revition[i] = [revition[i].join(" ").replace("}", " ")];
+                            }
+
+                            if (revition[i].join(" ").match(/\w*class/igm)) {
+                                class_rev += "$" + revition[i].join(" ");
+                            } else {
+                                class_rev += revition[i].join(" ");
+                            }
+                        }
+
+                        // kita gunakan js beauty agar sintaks nya lebih rapi
+                        const class_prop = beautify(class_rev, {
+                            indent_size: 2,
+                            space_in_empty_paren: true,
+                        });
+
+                        // kita kembalikan class yang telah di olah dan di jadiin array
+                        return [class_prop.split("$"), class_name.join("").replace(/\w*{/igm, "\n").replace(/\w*class|=/igm, "").split("\n")];
+                    }
+
+                    // fungsi ini untuk mengambil property class
+                    function getClassAtribute(ClassM, ClassName) {
+                        // di sini nama kelasnya di ambil
+                        const ClassesName = ClassName;
+                        // kita ambil class nya
+                        // dan di jadiin array setiap string nya
+                        const class_dec = ClassM.replace(/\;/igm, ";\n").split("\n");
+                        // kita ambil lokasi index dari string :,{,}
+                        let count_of_class_prop = 0;
+                        // kita masukan index dari :,{,} dengan di jadiin object
+                        const prop = [];
+                        // kita masukan jumlah index nya
+                        const prop_count = [];
+
+                        //di sini nama class yang udah di olah
+                        let CLASS_NAME = "";
+
+                        // console.log(class_dec.join("").match(/\w*class/))
+
+                        // kita lakukan filter untuk mengambil index dari property nya
+                        for (let i = 0; i < class_dec.length; i++) {
+
+                            if (class_dec[i].match(/\w*:/) && class_dec[i].match(/\w*{/) || class_dec[i].match(/\w*:/)) {
+                                count_of_class_prop++;
+                                prop_count.push(count_of_class_prop);
+                                if (class_dec[i].match(/\w*:/) && class_dec[i].match(/\w*{/) && !class_dec[i].match(/\w*;/)) {
+
+                                    class_dec[i] = CLASS_NAME.replace(/\s*/igm, "") + " " + class_dec[i].replace(/\s*/igm, "");
+                                }
+                                prop.push({
+                                    [count_of_class_prop]: i,
+                                });
+                            } else if (class_dec[i].match(/\w*},/)) {
+                                prop.push({
+                                    [count_of_class_prop]: i,
+                                });
+                            }
+
+                            if (class_dec[i].match(/\w*class/igm)) {
+                                CLASS_NAME = class_dec[i].replace(/\w*{/igm, "").replace(/\w*class|=/igm, "");
+                            }
+                        }
+
+                        // di sini semua property di masukan
+                        const all_prop = [];
+
+                        for (let x = 0; x < prop_count.length; x++) {
+                            for (let y = 0; y < prop.length; y++) {
+                                if (prop[y][prop_count[x]]) {
+                                    all_prop.push(prop[y][prop_count[x]]);
+                                    // console.log(class_dec[prop[y][prop_count[x]]])
+                                }
+                            }
+                        }
+
+                        // di sini kita ambil property class nya dan di jadiin array
+                        const clear = class_dec.slice(all_prop[0], all_prop[all_prop.length - 1] + 1).join("\n").split("\n");
+                        console.log(beautify(CLASS_NAME + " = [\n" + clear.join("").replace(/\w*,/igm, "\t").replace(/\;/igm, ";\n").replace(/\w*=/igm, ":"), {
+                            indent_size: 2,
+                            space_in_empty_paren: true,
+                        }) + "\n]");
+
+                        // kita gunakan js beauty agar sintaks nya lebih rapi
+                        return beautify(clear.join("").replace(/\w*,/igm, "\t").replace(/\;/igm, ";\n").replace(/\w*=/igm, ":"), {
+                            indent_size: 2,
+                            space_in_empty_paren: true,
+                        });
+
+
+                    }
+
+
+                    const CLASS_CLASIFICATION_FROM_JSS = getClass()[0];
+
+                    let hasil = "";
+
+                    for (const x of CLASS_CLASIFICATION_FROM_JSS) {
+                        hasil += getClassAtribute(x);
+                    }
+
+                    // log(class_clasification_from_jss.join("\n"));
+                    this.content = hasil;
+                    this.init();
+                });
+            }
+
+        } else {
+            fs.readFile("src/" + this.config.src[x], (err, file) => {
+                console.log(file.toString("utf-8"));
+            });
+        }
+    }
 }
 
 exports.light = compiler;

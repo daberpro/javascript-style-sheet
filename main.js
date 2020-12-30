@@ -1,14 +1,13 @@
 const light = require("./index").light;
 
 const compiler = new light({
-	file_name:["my-1.css","my-other.css"],
-	path: "out/",
-	content: ["*{\n\t margin: 0px;\n\t padding:0px;\n}","body{\n\t margin: 0px;\n\t padding:0px;\n}"],
+	file_name:["bundle.main.js"],
+	path: "bin/",
+	content: [""],
 	config:{
 		src: ["my-jss.js"]
 	}
 });
 
-
-compiler.init();
 compiler.watch();
+compiler.init();
